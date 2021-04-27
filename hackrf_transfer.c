@@ -501,7 +501,7 @@ int rx_callback(hackrf_transfer* transfer) {
 				}
 					
 #ifdef PRINT_MSG
-				printf("bytes sent = %lu\n", bytes_sent);
+				fprintf(stderr, "bytes sent = %lu\n", bytes_sent);
 #endif
 
 				return 0;
@@ -593,7 +593,7 @@ int tx_callback(hackrf_transfer* transfer) {
 
 	}
 
-	/* copy data in one nodei buffer(256K) of the ring list to transfer buffer
+	/* copy data in one node buffer(256K) of the ring list to transfer buffer
 	 * 2021-03-24 08:09:54
 	 * by zuko
 	 * */	
@@ -820,6 +820,7 @@ int main(int argc, char** argv) {
 			s_host = optarg;
 			break;
 		case 'P':
+			using_socket = true;
 			s_port = atoi(optarg);
 			break;
 		/*-----------------socket cases end-----------------*/	
@@ -1064,7 +1065,7 @@ int main(int argc, char** argv) {
 	/*--------------------socket initialization end-------------------*/
 
 	if( receive ) {
-		transceiver_mode = TRANSCEIVER_MODE_RX;			
+		transceiver_mode = TRANSCEIVER_MODE_RX;
 	}
 
 	if( transmit ) {
@@ -1377,9 +1378,13 @@ int main(int argc, char** argv) {
 			     * by zuko
 			     * */
 			    fprintf(stderr, "callback count = %d\n", callback_count_now);
-			    fprintf(stderr, "p_write = %d\n", p_write->nodeno);
-			    fprintf(stderr, "p_read = %d\n", p_read->nodeno);
-#endif
+			    if (transmit && using_socket)
+			    {
+				    fprintf(stderr, "p_write = %d\n", p_write->nodeno);
+				    fprintf(stderr, "p_read = %d\n", p_read->nodeno);
+
+			    }
+ #endif
 			}
 
 			time_start = time_now;
@@ -1394,10 +1399,13 @@ int main(int argc, char** argv) {
 
 	/* 2021-04-12 10:13:09
 	 * by zuko*/
-	if (close(sockfd) == 0)
-		fprintf(stderr, "\nclose socketfd done\n");
-	else
-		fprintf(stderr, "close socketfd failed: %s(errno: %d)\n", strerror(errno), errno);
+	if (using_socket)
+	{
+		if (close(sockfd) == 0)
+			fprintf(stderr, "\nclose socketfd done\n");
+		else
+			fprintf(stderr, "close socketfd failed: %s(errno: %d)\n", strerror(errno), errno);
+	}
 
 	result = hackrf_is_streaming(device);	
 	if (do_exit)

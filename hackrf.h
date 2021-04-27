@@ -68,7 +68,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 typedef struct node{
 	uint16_t nodeno; // node number
 	uint8_t buffer[NODE_BUFFER_SIZE * 2]; // size * 2 to prevent overflow, 2021-04-16 04:36:24
-	unsigned int length; // actual stored data length 
+//	unsigned int length; // actual stored data length 
 	struct node * next;
 } *pNode;
 /*------------------------------------------------*/

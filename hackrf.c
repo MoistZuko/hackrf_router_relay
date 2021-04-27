@@ -176,9 +176,9 @@ int last_libusb_error = LIBUSB_SUCCESS;
 /*-------------------------------------------------------------------*/
 
 /* number of nodes in the ring list
- * 256K * 256 * 2 = 128M
+ * 256K * 128 * 2 = 64M
  * */
-#define N_NODE 256 
+#define N_NODE 128 
 
 /* global pointers for ring list operations
  * p_write used by socket thread in this file
@@ -209,7 +209,6 @@ static pNode init_ring_list(int n)
 	list_head->next = NULL;
 	tmp1 = list_head;
 	tmp1->nodeno = 0;
-	tmp1->length = 0;
 
 	for(i = 1; i < n; i++)
 	{
@@ -220,7 +219,6 @@ static pNode init_ring_list(int n)
 			return NULL;
 		}
 		tmp2->nodeno = i;
-		tmp2->length = 0;
 		tmp2->next = NULL;
 		tmp1->next = tmp2;
 		tmp1 = tmp1->next;
@@ -237,7 +235,10 @@ static void * socket_threadproc(void * arg)
 {
 	int recvlen;
 	int cfd = *(int *)arg;
-//	uint8_t tmp_buffer[NODE_BUFFER_SIZE];
+
+	/* 2021-04-27 10:30:06 */
+	unsigned int write_offset = 0;
+	unsigned int write_overflow;
 
 	// initialize a ring list shared by socket thread and tx_callback
 	head = init_ring_list(N_NODE);
@@ -248,11 +249,11 @@ static void * socket_threadproc(void * arg)
 	}
 	p_read = head;
 	p_write = head; 
-	uint8_t * p_buffer_write = p_write->buffer; // write pointer inside a node buffer
+	uint8_t * p_write_in_node = p_write->buffer; // write pointer inside a node buffer
 
 	while (1)
 	{
-		recvlen = recv(cfd, p_buffer_write, NODE_BUFFER_SIZE, 0);
+		recvlen = recv(cfd, p_write_in_node, NODE_BUFFER_SIZE, 0);
 //		fprintf(stderr, "recvlen = %d\n", recvlen);
 		if (recvlen < 0)
 		{
@@ -261,26 +262,29 @@ static void * socket_threadproc(void * arg)
 		}
 		else if (recvlen == 0)
 		{
-			printf("client[%d] exit\n", cfd);
+			fprintf(stderr, "\nclient[%d] exit\n", cfd);
 			break;
 		}
 		else
 		{
 			/* revc() writes a node buffer for several times until data length exceeds NODE_BUFFER_SIZE
-			 * 2021-04-16 04:49:47 
+			 * 2021-04-27 10:32:32 
 			 * by zuko*/
 		
-			p_buffer_write += recvlen;
-			if (p_buffer_write - p_write->buffer >= NODE_BUFFER_SIZE)
+			p_write_in_node += recvlen;
+			write_offset += recvlen;
+			if (write_offset >= NODE_BUFFER_SIZE)
 			{
-				p_write->length = p_buffer_write - p_write->buffer;
+				write_overflow = write_offset - NODE_BUFFER_SIZE;
+				memcpy(p_write->next, p_write + NODE_BUFFER_SIZE, write_overflow);
 				p_write = p_write->next;
 				if (p_write == p_read)
 				{
 					fprintf(stderr, "socket thread error: p_write catches p_read\n");
 					break;
 				}	
-				p_buffer_write = p_write->buffer;
+				p_write_in_node = p_write->buffer + write_overflow;
+				write_offset = write_overflow;
 			}
 		}
 	}
