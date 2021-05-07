@@ -522,7 +522,6 @@ int tx_callback(hackrf_transfer* transfer) {
 	unsigned int i;
 
 
-	callback_count++;
 
 	/*
 	 * 2020年12月28日 星期一 16时38分05秒
@@ -609,7 +608,11 @@ int tx_callback(hackrf_transfer* transfer) {
 		if (socket_thread_end == 1)
 			return -1;
 		if (p_read == p_write)
+		{
+			callback_count--;
 			return 0;
+		}
+		callback_count++;
 		memcpy(transfer->buffer, p_read->buffer, NODE_BUFFER_SIZE);
 		p_read = p_read->next;
 		return 0;
@@ -1377,7 +1380,7 @@ int main(int argc, char** argv) {
 			     * 2021年02月25日 星期四 14时33分00秒
 			     * by zuko
 			     * */
-			    fprintf(stderr, "callback count = %d\n", callback_count_now);
+			    fprintf(stderr, "effective callback count = %d\n", callback_count_now);
 			    if (transmit && using_socket)
 			    {
 				    fprintf(stderr, "p_write = %d\n", p_write->nodeno);

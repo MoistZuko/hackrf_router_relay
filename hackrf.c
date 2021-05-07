@@ -276,7 +276,7 @@ static void * socket_threadproc(void * arg)
 			if (write_offset >= NODE_BUFFER_SIZE)
 			{
 				write_overflow = write_offset - NODE_BUFFER_SIZE;
-				memcpy(p_write->next, p_write + NODE_BUFFER_SIZE, write_overflow);
+				memcpy(p_write->next->buffer, p_write->buffer + NODE_BUFFER_SIZE, write_overflow);
 				p_write = p_write->next;
 				if (p_write == p_read)
 				{
